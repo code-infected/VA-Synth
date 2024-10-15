@@ -16,6 +16,18 @@ AZURE_API_URL = os.getenv("AZURE_API_URL")
 
 st.title("AI-Powered Video Audio Replacement")
 
+def extract_audio_from_video(video_path):
+    """Extracts audio from a video file and returns the path to the audio file."""
+    try:
+        video = VideoFileClip(video_path)
+        temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+        audio = video.audio
+        audio.write_audiofile(temp_audio_path, codec='pcm_s16le')  # Use WAV format
+        return temp_audio_path
+    except Exception as e:
+        st.error(f"Error during audio extraction: {e}")
+        return None
+
 def transcribe_audio(audio_path):
     """Transcribes audio using Google Speech-to-Text API."""
     try:
@@ -99,25 +111,26 @@ if uploaded_file:
     # Extract audio from the video
     audio_path = extract_audio_from_video(temp_path)
 
-    with st.spinner("Transcribing audio..."):
-        transcription = transcribe_audio(audio_path)
-    
-    if transcription:
-        with st.spinner("Correcting..."):
-            corrected_transcription = correct_transcription(transcription)
+    if audio_path:
+        with st.spinner("Transcribing audio..."):
+            transcription = transcribe_audio(audio_path)
         
-        if corrected_transcription:
-            with st.spinner("Synthesizing..."):
-                new_audio = synthesize_speech(corrected_transcription)
+        if transcription:
+            with st.spinner("Correcting..."):
+                corrected_transcription = correct_transcription(transcription)
             
-            if new_audio:
-                with st.spinner("Replacing audio..."):
-                    output_video_path = replace_audio_in_video(temp_path, new_audio)
+            if corrected_transcription:
+                with st.spinner("Synthesizing..."):
+                    new_audio = synthesize_speech(corrected_transcription)
                 
-                if output_video_path:
-                    st.success("Audio replaced successfully! Download Now")
-                    with open(output_video_path, "rb") as video_file:
-                        st.download_button(label="Download Video", data=video_file, file_name="output.mp4")
-                    os.remove(output_video_path)
+                if new_audio:
+                    with st.spinner("Replacing audio..."):
+                        output_video_path = replace_audio_in_video(temp_path, new_audio)
+                    
+                    if output_video_path:
+                        st.success("Audio replaced successfully! Download Now")
+                        with open(output_video_path, "rb") as video_file:
+                            st.download_button(label="Download Video", data=video_file, file_name="output.mp4")
+                        os.remove(output_video_path)
     
     os.remove(temp_path)
