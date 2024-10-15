@@ -38,7 +38,7 @@ def transcribe_audio(audio_path):
         audio = speech.RecognitionAudio(content=content)
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=16000,  # Set to the sample rate of your audio
+            sample_rate_hertz=audio_file.getframerate(),  # Set to the sample rate of your audio
             language_code="en-US"
         )
         response = client.recognize(config=config, audio=audio)
