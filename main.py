@@ -67,7 +67,7 @@ def transcribe_audio(audio_path):
     try:
         # Compress audio before transcription
         compressed_audio_path = compress_audio(audio_path)
-        
+
         # Open the audio file using wave to read its properties
         with wave.open(compressed_audio_path, "rb") as audio_file:
             sample_rate = audio_file.getframerate()
@@ -77,7 +77,7 @@ def transcribe_audio(audio_path):
         # Read the audio file content for transcription
         with open(compressed_audio_path, "rb") as audio_file_content:
             content = audio_file_content.read()
-        
+
         audio = speech.RecognitionAudio(content=content)
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -85,16 +85,13 @@ def transcribe_audio(audio_path):
             language_code="en-US"
         )
         
-        # Handle chunking if audio size exceeds limit
+        # Check the audio file size to determine the transcription method
         if os.path.getsize(compressed_audio_path) > 10 * 1024 * 1024:  # 10 MB limit
-            chunks = split_audio_into_chunks(compressed_audio_path)
-            transcriptions = []
-            for chunk in chunks:
-                with open(chunk, "rb") as audio_file:
-                    content_chunk = audio_file.read()
-                response = client.recognize(config=config, audio=speech.RecognitionAudio(content=content_chunk))
-                transcriptions.extend([result.alternatives[0].transcript for result in response.results])
-            return " ".join(transcriptions)
+            # Use LongRunningRecognize for long audio files
+            operation = client.long_running_recognize(config=config, audio=audio)
+            response = operation.result(timeout=90)  # Wait for the operation to complete
+            transcription = " ".join([result.alternatives[0].transcript for result in response.results])
+            return transcription
         else:
             response = client.recognize(config=config, audio=audio)
             transcription = " ".join([result.alternatives[0].transcript for result in response.results])
@@ -102,6 +99,7 @@ def transcribe_audio(audio_path):
     except Exception as e:
         st.error(f"Error during transcription: {e}")
         return None
+
 
 def correct_transcription(transcription):
     """Corrects transcription using Azure OpenAI GPT-4o."""
