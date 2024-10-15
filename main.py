@@ -72,7 +72,7 @@ def correct_transcription(transcription):
     try:
         headers = {"Content-Type": "application/json", "api-key": azure_api_key}
         data = {
-            "messages": [{"role": "user", "content": f"Please correct this transcript: {transcription}"}],
+            "messages": [{"role": "user", "content": f"Please correct this transcript should not say anything other than given in transcript and dont alter the transcript: {transcription}"}],
             "max_tokens": 1000
         }
         response = requests.post(azure_api_url, headers=headers, json=data)
