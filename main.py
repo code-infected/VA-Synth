@@ -76,12 +76,24 @@ def correct_transcription(transcription):
             "max_tokens": 1000
         }
         response = requests.post(azure_api_url, headers=headers, json=data)
-        response_data = response.json()
-        corrected_text = response_data['choices'][0]['message']['content']
-        return corrected_text
+        
+        # Check for a successful response and expected content
+        if response.status_code == 200:
+            response_data = response.json()
+            if 'choices' in response_data and len(response_data['choices']) > 0:
+                corrected_text = response_data['choices'][0]['message']['content']
+                return corrected_text
+            else:
+                st.error("Unexpected response format from Azure OpenAI.")
+                return None
+        else:
+            st.error(f"Error from Azure API: {response.status_code} - {response.text}")
+            return None
+
     except Exception as e:
         st.error(f"Error during transcription correction: {e}")
         return None
+
 
 def synthesize_speech(text):
     """Synthesizes speech from text using Google Text-to-Speech API."""
