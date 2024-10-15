@@ -7,6 +7,7 @@ import tempfile
 import requests
 import os
 from dotenv import load_dotenv
+from pydub import AudioSegment
 
 # Load environment variables from .env file (if any)
 load_dotenv()
@@ -17,21 +18,25 @@ st.title("AI-Powered Video Audio Replacement")
 azure_api_key = st.text_input("Enter your Azure API Key", type="password")
 azure_api_url = st.text_input("Enter your Azure API URL")
 
+
 def extract_audio_from_video(video_path):
     """Extracts audio from a video file, converts to mono, and returns the path to the audio file."""
     try:
+        # Extract audio from video
         video = VideoFileClip(video_path)
         temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
-        
-        # Extract and convert audio to mono
-        audio = video.audio
-        audio = audio.set_channels(1)  # Ensure the audio is mono
-        audio.write_audiofile(temp_audio_path, codec='pcm_s16le')  # Use WAV format
+        video.audio.write_audiofile(temp_audio_path, codec='pcm_s16le')  # Use WAV format
+
+        # Convert to mono using pydub
+        audio = AudioSegment.from_file(temp_audio_path)
+        mono_audio = audio.set_channels(1)
+        mono_audio.export(temp_audio_path, format="wav")
         
         return temp_audio_path
     except Exception as e:
         st.error(f"Error during audio extraction: {e}")
         return None
+
 
 
 def transcribe_audio(audio_path):
