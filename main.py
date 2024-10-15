@@ -7,14 +7,14 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file (if any)
 load_dotenv()
 
-# Azure OpenAI setup (retrieve keys from environment variables)
-AZURE_API_KEY = os.getenv("AZURE_API_KEY")
-AZURE_API_URL = os.getenv("AZURE_API_URL")
-
 st.title("AI-Powered Video Audio Replacement")
+
+# Input fields for Azure API Key and URL
+azure_api_key = st.text_input("Enter your Azure API Key", type="password")
+azure_api_url = st.text_input("Enter your Azure API URL")
 
 def extract_audio_from_video(video_path):
     """Extracts audio from a video file and returns the path to the audio file."""
@@ -52,12 +52,12 @@ def transcribe_audio(audio_path):
 def correct_transcription(transcription):
     """Corrects transcription using Azure OpenAI GPT-4o."""
     try:
-        headers = {"Content-Type": "application/json", "api-key": AZURE_API_KEY}
+        headers = {"Content-Type": "application/json", "api-key": azure_api_key}
         data = {
             "messages": [{"role": "user", "content": f"Please correct this transcript: {transcription}"}],
             "max_tokens": 1000
         }
-        response = requests.post(AZURE_API_URL, headers=headers, json=data)
+        response = requests.post(azure_api_url, headers=headers, json=data)
         response_data = response.json()
         corrected_text = response_data['choices'][0]['message']['content']
         return corrected_text
@@ -103,7 +103,7 @@ def replace_audio_in_video(video_path, new_audio_content):
 
 # Streamlit interface
 uploaded_file = st.file_uploader("Upload a video file", type=["mp4", "mov", "avi"])
-if uploaded_file:
+if uploaded_file and azure_api_key and azure_api_url:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
         temp_video.write(uploaded_file.read())
         temp_path = temp_video.name
@@ -134,3 +134,5 @@ if uploaded_file:
                         os.remove(output_video_path)
     
     os.remove(temp_path)
+else:
+    st.warning("Please upload a video file and enter your Azure API credentials.")
