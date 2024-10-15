@@ -5,10 +5,14 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 import tempfile
 import requests
 import os
+from dotenv import load_dotenv
 
-# Azure OpenAI setup
-AZURE_API_KEY = ""
-AZURE_API_URL = ""
+# Load environment variables from .env file
+load_dotenv()
+
+# Azure OpenAI setup (retrieve keys from environment variables)
+AZURE_API_KEY = os.getenv("AZURE_API_KEY")
+AZURE_API_URL = os.getenv("AZURE_API_URL")
 
 st.title("AI-Powered Video Audio Replacement")
 
