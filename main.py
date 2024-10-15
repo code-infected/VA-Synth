@@ -102,7 +102,7 @@ def synthesize_speech(text):
         input_text = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US", 
-            name="en-US-JourneyNeural"  # Adjust this to use the desired voice
+            name="en-AU-Standard-B"  # Adjust this to use the desired voice
         )
         audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
         
