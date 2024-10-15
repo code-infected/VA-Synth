@@ -37,19 +37,45 @@ def extract_audio_from_video(video_path):
         st.error(f"Error during audio extraction: {e}")
         return None
 
+def compress_audio(audio_path, target_dBFS=-20.0):
+    """Compresses the audio file to a target dBFS level."""
+    audio = AudioSegment.from_wav(audio_path)
+    
+    # Reduce the volume to target dBFS level
+    change_in_dBFS = target_dBFS - audio.dBFS
+    compressed_audio = audio.apply_gain(change_in_dBFS)
+    
+    # Save to a temporary file
+    temp_compressed_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+    compressed_audio.export(temp_compressed_path, format="wav")
+    
+    return temp_compressed_path
 
+def split_audio_into_chunks(audio_path, chunk_length_ms=60000):
+    """Splits audio into smaller chunks."""
+    audio = AudioSegment.from_wav(audio_path)
+    chunks = []
+    for i in range(0, len(audio), chunk_length_ms):
+        chunk = audio[i:i + chunk_length_ms]
+        chunk_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+        chunk.export(chunk_path, format="wav")
+        chunks.append(chunk_path)
+    return chunks
 
 def transcribe_audio(audio_path):
     """Transcribes audio using Google Speech-to-Text API."""
     try:
+        # Compress audio before transcription
+        compressed_audio_path = compress_audio(audio_path)
+        
         # Open the audio file using wave to read its properties
-        with wave.open(audio_path, "rb") as audio_file:
+        with wave.open(compressed_audio_path, "rb") as audio_file:
             sample_rate = audio_file.getframerate()
 
         client = speech.SpeechClient()
         
         # Read the audio file content for transcription
-        with open(audio_path, "rb") as audio_file_content:
+        with open(compressed_audio_path, "rb") as audio_file_content:
             content = audio_file_content.read()
         
         audio = speech.RecognitionAudio(content=content)
@@ -59,10 +85,20 @@ def transcribe_audio(audio_path):
             language_code="en-US"
         )
         
-        # Perform transcription
-        response = client.recognize(config=config, audio=audio)
-        transcription = " ".join([result.alternatives[0].transcript for result in response.results])
-        return transcription
+        # Handle chunking if audio size exceeds limit
+        if os.path.getsize(compressed_audio_path) > 10 * 1024 * 1024:  # 10 MB limit
+            chunks = split_audio_into_chunks(compressed_audio_path)
+            transcriptions = []
+            for chunk in chunks:
+                with open(chunk, "rb") as audio_file:
+                    content_chunk = audio_file.read()
+                response = client.recognize(config=config, audio=speech.RecognitionAudio(content=content_chunk))
+                transcriptions.extend([result.alternatives[0].transcript for result in response.results])
+            return " ".join(transcriptions)
+        else:
+            response = client.recognize(config=config, audio=audio)
+            transcription = " ".join([result.alternatives[0].transcript for result in response.results])
+            return transcription
     except Exception as e:
         st.error(f"Error during transcription: {e}")
         return None
