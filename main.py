@@ -1,5 +1,6 @@
 import streamlit as st
 import openai
+import wave
 from google.cloud import speech, texttospeech
 from moviepy.editor import VideoFileClip, AudioFileClip
 import tempfile
@@ -31,18 +32,25 @@ def extract_audio_from_video(video_path):
 def transcribe_audio(audio_path):
     """Transcribes audio using Google Speech-to-Text API."""
     try:
+        # Open the audio file using wave to read its properties
+        with wave.open(audio_path, "rb") as audio_file:
+            sample_rate = audio_file.getframerate()
+
         client = speech.SpeechClient()
-        with open(audio_path, "rb") as audio_file:
-            content = audio_file.read()
+        
+        # Read the audio file content for transcription
+        with open(audio_path, "rb") as audio_file_content:
+            content = audio_file_content.read()
         
         audio = speech.RecognitionAudio(content=content)
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=audio_file.getframerate(),  # Set to the sample rate of your audio
+            sample_rate_hertz=sample_rate,  # Use the detected sample rate
             language_code="en-US"
         )
-        response = client.recognize(config=config, audio=audio)
         
+        # Perform transcription
+        response = client.recognize(config=config, audio=audio)
         transcription = " ".join([result.alternatives[0].transcript for result in response.results])
         return transcription
     except Exception as e:
